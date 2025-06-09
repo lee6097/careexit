@@ -7,7 +7,10 @@
     window.onload = function () {
       const from = document.referrer;
 
-      // talktalkcareplus에서 왔을 경우 → 닫기 시도 (0.05초 뒤)
+      // 히스토리 한 칸 추가 → 뒤로가기도 가능하게 만들기
+      history.pushState({}, '', location.href);
+
+      // talktalkcare에서 왔을 경우 → 닫기 시도 (0.05초 뒤)
       if (from.includes("https://lee6097.github.io/talktalkcare/")) {
         setTimeout(() => {
           window.close();
