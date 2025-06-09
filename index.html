@@ -1,30 +1,17 @@
 <!DOCTYPE html>
 <html>
 <head>
+  <title>Redirecting...</title>
   <meta charset="UTF-8">
-  <title>Exit</title>
   <script>
     window.onload = function () {
-      const from = document.referrer;
-
-      // 현재 페이지를 기록 (pushState)
-      history.replaceState({}, '', location.href); // 히스토리 초기화
-      history.pushState({}, '', location.href + '#redirected'); // 강제로 한 칸 추가
-
-      if (from.includes("https://lee6097.github.io/talktalkcare/")) {
-        setTimeout(() => {
-          window.close();
-          setTimeout(() => {
-            document.body.innerHTML = "<p style='text-align:center;'>창을 닫아주세요.</p>";
-          }, 3000);
-        }, 500);
-      } else {
-        setTimeout(() => {
-          location.href = "https://lee6097.github.io/talktalkcare/";
-        }, 2000); // 딜레이 추가
-      }
+      setTimeout(() => {
+        window.location.href = 'https://lee6097.github.io/talktalkcare/'; // 또는 github page 주소
+      }, 100); // 100ms 정도 딜레이를 줘야 히스토리에 남음
     };
   </script>
 </head>
-<body></body>
+<body>
+  <p>Loading...</p>
+</body>
 </html>
