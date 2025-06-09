@@ -1,17 +1,28 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Redirecting...</title>
   <meta charset="UTF-8">
+  <title>Exit</title>
   <script>
     window.onload = function () {
-      setTimeout(() => {
-        window.location.href = 'https://lee6097.github.io/talktalkcare/'; // 또는 github page 주소
-      }, 100); // 100ms 정도 딜레이를 줘야 히스토리에 남음
+      const from = document.referrer;
+
+      // talktalkcareplus에서 왔을 경우 → 닫기 시도 (0.05초 뒤)
+      if (from.includes("https://lee6097.github.io/talktalkcare/")) {
+        setTimeout(() => {
+          window.close();
+
+          // 닫히지 않으면 fallback 처리
+          setTimeout(() => {
+            document.body.innerHTML = "<p style='text-align:center;'>창을 닫아주세요.</p>";
+          }, 300);
+        }, 50); // 0.05초 딜레이
+      } else {
+        // 그 외의 경우에는 메인 페이지로 리디렉션
+        location.href = "https://lee6097.github.io/talktalkcare/";
+      }
     };
   </script>
 </head>
-<body>
-  <p>Loading...</p>
-</body>
+<body></body>
 </html>
