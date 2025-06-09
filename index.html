@@ -1,31 +1,20 @@
-<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="UTF-8">
-  <title>Exit</title>
-  <script>
-    window.onload = function () {
-      const from = document.referrer;
+window.onload = function () {
+  const from = document.referrer;
 
-      // 히스토리 한 칸 추가 → 뒤로가기도 가능하게 만들기
-      history.pushState({}, '', location.href);
+  // 현재 페이지를 기록 (pushState)
+  history.replaceState({}, '', location.href); // 히스토리 초기화
+  history.pushState({}, '', location.href + '#redirected'); // 강제로 한 칸 추가
 
-      // talktalkcare에서 왔을 경우 → 닫기 시도 (0.05초 뒤)
-      if (from.includes("https://lee6097.github.io/talktalkcare/")) {
-        setTimeout(() => {
-          window.close();
-
-          // 닫히지 않으면 fallback 처리
-          setTimeout(() => {
-            document.body.innerHTML = "<p style='text-align:center;'>창을 닫아주세요.</p>";
-          }, 300);
-        }, 50); // 0.05초 딜레이
-      } else {
-        // 그 외의 경우에는 메인 페이지로 리디렉션
-        location.href = "https://lee6097.github.io/talktalkcare/";
-      }
-    };
-  </script>
-</head>
-<body></body>
-</html>
+  if (from.includes("https://lee6097.github.io/talktalkcare/")) {
+    setTimeout(() => {
+      window.close();
+      setTimeout(() => {
+        document.body.innerHTML = "<p style='text-align:center;'>창을 닫아주세요.</p>";
+      }, 300);
+    }, 50);
+  } else {
+    setTimeout(() => {
+      location.href = "https://lee6097.github.io/talktalkcare/";
+    }, 200); // 딜레이 추가
+  }
+};
