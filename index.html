@@ -47,7 +47,7 @@
   <script>
     const SUPABASE_URL = 'https://kguyjpeliqwxvaovznvz.supabase.co';
     const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtndXlqcGVsaXF3eHZhb3Z6bnZ6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjUyMzk4NzcsImV4cCI6MjA4MDgxNTg3N30.zOvqAJhudpXSVLRGUiGcfjqiLGBVSBBh7GqwHUZvMck';
-    const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    const supa = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
     const listDiv = document.getElementById('list');
     const modal = document.getElementById('modal');
@@ -70,7 +70,7 @@
           <button data-id="${row.id}">삭제</button>
         `;
         card.querySelector('button').addEventListener('click', async (e) => {
-          await supabase.from('shortages').delete().eq('id', row.id);
+          await supa.from('shortages').delete().eq('id', row.id);
           loadData();
         });
         listDiv.appendChild(card);
@@ -78,7 +78,7 @@
     }
 
     async function loadData() {
-      const { data, error } = await supabase
+      const { data, error } = await supa
         .from('shortages')
         .select('*')
         .order('created_at', { ascending: false });
@@ -90,7 +90,7 @@
       const cafe = document.getElementById('cafeSelect').value;
       const item = document.getElementById('itemInput').value.trim();
       if (!cafe || !item) return;
-      await supabase.from('shortages').insert({ cafe, item });
+      await supa.from('shortages').insert({ cafe, item });
       form.reset();
       modal.style.display = 'none';
       loadData();
@@ -103,4 +103,5 @@
   </script>
 </body>
 </html>
+
 
