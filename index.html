@@ -2,22 +2,193 @@
 <html lang="ko">
 <head>
   <meta charset="UTF-8" />
-  <title>의왕시니어클럽 카페 물품 현황</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>의왕시니어클럽 카페 물품 현황판</title>
+
   <style>
-    body { font-family: sans-serif; padding: 20px; max-width: 600px; margin: auto; }
-    .card { border: 1px solid #ccc; padding: 12px; margin-bottom: 10px; border-radius: 8px; }
-    .card h3 { margin-top: 0; }
-    button { padding: 8px 12px; margin-top: 5px; }
-    #modal { position: fixed; inset: 0; background: rgba(0,0,0,0.3); display: none; align-items: center; justify-content: center; }
-    #modalContent { background: #fff; padding: 20px; width: 90%; max-width: 400px; border-radius: 10px; }
-    label { display: block; margin-top: 10px; }
+    @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&display=swap');
+
+    :root {
+      --bg: #fff6ed;
+      --card-bg: #ffe0b2;
+      --card-border: #ffb74d;
+      --text: #4e342e;
+      --accent: #ff8a50;
+      --accent-dark: #ff7043;
+      --accent-light: #ffcc80;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      font-family: 'Noto Sans KR', sans-serif;
+      padding: 24px;
+      max-width: 760px;
+      margin: auto;
+      background: var(--bg);
+      color: var(--text);
+    }
+
+    h1 {
+      text-align: center;
+      color: #d84315;
+      margin-bottom: 28px;
+      font-size: 2rem;
+    }
+
+    #list {
+      margin-bottom: 30px;
+    }
+
+    .card {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      padding: 18px 20px;
+      margin-bottom: 18px;
+      border-radius: 14px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+    }
+
+    .card h3 {
+      margin: 0 0 10px;
+      font-size: 1.3rem;
+      color: #c24e10;
+    }
+
+    ul {
+      list-style: disc;
+      margin: 0;
+      padding-left: 18px;
+    }
+
+    li {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      margin: 8px 0;
+      font-size: 1rem;
+    }
+
+    .delete-btn {
+      font-size: 0.8rem;
+      padding: 3px 8px;
+      color: #fff;
+      background: var(--accent);
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+
+    .delete-btn:hover {
+      background: var(--accent-dark);
+    }
+
+    #openModal {
+      display: block;
+      margin: 34px auto;
+      font-size: 1.25rem;
+      padding: 18px 38px;
+      background: #ff7043;
+      color: #fff;
+      border: none;
+      border-radius: 16px;
+      cursor: pointer;
+      box-shadow: 0 6px 18px rgba(255,112,67,0.35);
+    }
+
+    #openModal:hover {
+      background: #ff5722;
+    }
+
+    #modal {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.45);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      z-index: 999;
+    }
+
+    #modalContent {
+      background: #fff;
+      width: 90%;
+      max-width: 440px;
+      border-radius: 18px;
+      padding: 28px 26px;
+      box-shadow: 0 12px 30px rgba(0,0,0,0.2);
+    }
+
+    #modalContent h2 {
+      margin: 0 0 12px;
+      color: #d84315;
+      font-size: 1.5rem;
+    }
+
+    label {
+      display: block;
+      font-size: 1.1rem;
+      margin-top: 16px;
+    }
+
+    select, input[type="text"] {
+      width: 100%;
+      padding: 13px;
+      font-size: 1.1rem;
+      margin-top: 8px;
+      border-radius: 10px;
+      border: 1px solid var(--accent-light);
+      background: #fffaf2;
+    }
+
+    #modalContent button {
+      margin-top: 20px;
+      width: 100%;
+      padding: 14px;
+      font-size: 1.05rem;
+      border: none;
+      border-radius: 12px;
+      cursor: pointer;
+    }
+
+    #submitBtn {
+      background: var(--accent);
+      color: #fff;
+    }
+
+    #submitBtn:hover {
+      background: var(--accent-dark);
+    }
+
+    #closeModal {
+      background: #eceff1;
+      color: #5d4037;
+    }
+
+    @media (max-width: 520px) {
+      li {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+      .delete-btn {
+        align-self: flex-end;
+      }
+    }
   </style>
 </head>
+
 <body>
-  <h1>의왕시니어클럽 카페 물품 현황</h1>
-  <div id="list"></div>
+  <h1>의왕시니어클럽 카페 물품 현황판</h1>
+
+  <div id="list">
+    <!-- 데이터가 여기 렌더링됩니다 -->
+  </div>
+
   <button id="openModal">발주하기</button>
 
+  <!-- 모달 -->
   <div id="modal">
     <div id="modalContent">
       <h2>부족 물품 입력</h2>
@@ -34,10 +205,12 @@
             <option>카페7</option>
           </select>
         </label>
-        <label>무슨 물품이 필요합니까?
+
+        <label>필요한 물품은 무엇입니까?
           <input type="text" id="itemInput" placeholder="예: 우유 3팩" required />
         </label>
-        <button type="submit">전송하기</button>
+
+        <button type="submit" id="submitBtn">전송하기</button>
         <button type="button" id="closeModal">닫기</button>
       </form>
     </div>
@@ -47,6 +220,7 @@
   <script>
     const SUPABASE_URL = 'https://kguyjpeliqwxvaovznvz.supabase.co';
     const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtndXlqcGVsaXF3eHZhb3Z6bnZ6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjUyMzk4NzcsImV4cCI6MjA4MDgxNTg3N30.zOvqAJhudpXSVLRGUiGcfjqiLGBVSBBh7GqwHUZvMck';
+
     const supa = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
     const listDiv = document.getElementById('list');
@@ -57,22 +231,42 @@
 
     function renderShortages(data) {
       listDiv.innerHTML = '';
-      if (data.length === 0) {
-        listDiv.innerHTML = '<p>현재 모든 물품이 충분합니다!</p>';
+      if (!data || data.length === 0) {
+        listDiv.innerHTML = '<p style="text-align:center; color:#8d6e63;">현재 모든 물품이 충분합니다!</p>';
         return;
       }
-      data.forEach(row => {
+
+      const grouped = data.reduce((acc, row) => {
+        if (!acc[row.cafe]) acc[row.cafe] = [];
+        acc[row.cafe].push(row);
+        return acc;
+      }, {});
+
+      Object.entries(grouped).forEach(([cafe, items]) => {
         const card = document.createElement('div');
         card.className = 'card';
-        card.innerHTML = `
-          <h3>${row.cafe}</h3>
-          <p>${row.item}</p>
-          <button data-id="${row.id}">삭제</button>
-        `;
-        card.querySelector('button').addEventListener('click', async (e) => {
-          await supa.from('shortages').delete().eq('id', row.id);
-          loadData();
+        card.innerHTML = `<h3>${cafe}</h3>`;
+        const ul = document.createElement('ul');
+
+        items.forEach(item => {
+          const li = document.createElement('li');
+          li.innerHTML = `
+            <span>${item.item}</span>
+            <button class="delete-btn" data-id="${item.id}">삭제</button>
+          `;
+          li.querySelector('button').addEventListener('click', async () => {
+            if (!confirm('정말 삭제하시겠습니까?')) return;
+            const { error } = await supa.from('shortages').delete().eq('id', item.id);
+            if (error) {
+              alert('삭제 중 오류 발생: ' + error.message);
+            } else {
+              loadData();
+            }
+          });
+          ul.appendChild(li);
         });
+
+        card.appendChild(ul);
         listDiv.appendChild(card);
       });
     }
@@ -82,7 +276,13 @@
         .from('shortages')
         .select('*')
         .order('created_at', { ascending: false });
-      if (!error) renderShortages(data);
+
+      if (error) {
+        console.error('데이터 조회 오류:', error);
+        listDiv.innerHTML = '<p style="text-align:center;color:#e53935;">데이터를 불러오지 못했어요.</p>';
+        return;
+      }
+      renderShortages(data);
     }
 
     form.addEventListener('submit', async (e) => {
@@ -90,19 +290,33 @@
       const cafe = document.getElementById('cafeSelect').value;
       const item = document.getElementById('itemInput').value.trim();
       if (!cafe || !item) return;
-      await supa.from('shortages').insert({ cafe, item });
+
+      const { error } = await supa.from('shortages').insert({ cafe, item });
+      if (error) {
+        console.error('입력 오류:', error);
+        alert('저장 중 오류가 발생했습니다: ' + error.message);
+        return;
+      }
       form.reset();
       modal.style.display = 'none';
       loadData();
     });
 
-    openModalBtn.addEventListener('click', () => { modal.style.display = 'flex'; });
-    closeModalBtn.addEventListener('click', () => { modal.style.display = 'none'; });
+    openModalBtn.addEventListener('click', () => {
+      modal.style.display = 'flex';
+    });
+
+    closeModalBtn.addEventListener('click', () => {
+      modal.style.display = 'none';
+    });
+
+    modal.addEventListener('click', (e) => {
+      if (e.target === modal) {
+        modal.style.display = 'none';
+      }
+    });
 
     loadData();
   </script>
 </body>
 </html>
-
-
-
