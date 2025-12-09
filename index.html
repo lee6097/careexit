@@ -1,28 +1,145 @@
 <!DOCTYPE html>
-<html>
+<html lang="ko">
 <head>
-  <meta charset="UTF-8">
-  <title>Exit</title>
-  <script>
-    window.onload = function () {
-      const from = document.referrer;
-
-      // talktalkcareplus에서 왔을 경우 → 닫기 시도 (0.05초 뒤)
-      if (from.includes("https://lee6097.github.io/talktalkcare/")) {
-        setTimeout(() => {
-          window.close();
-
-          // 닫히지 않으면 fallback 처리
-          setTimeout(() => {
-            document.body.innerHTML = "<p style='text-align:center;'>창을 닫아주세요.</p>";
-          }, 300);
-        }, 50); // 0.05초 딜레이
-      } else {
-        // 그 외의 경우에는 메인 페이지로 리디렉션
-        location.href = "https://lee6097.github.io/talktalkcare/";
-      }
-    };
-  </script>
+  <meta charset="UTF-8" />
+  <title>카페 물품 현황판</title>
+  <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+  <style>
+    body { font-family: sans-serif; margin: 20px; background:#f6f6f6;}
+    h1 { text-align:center; }
+    .board { max-width: 600px; margin:0 auto 40px; background:white; padding:20px; border-radius:12px; box-shadow:0 2px 10px rgba(0,0,0,.08);}
+    .request { display:flex; justify-content:space-between; padding:10px 0; border-bottom:1px solid #eee;}
+    .request:last-child { border-bottom:none; }
+    button { cursor:pointer; }
+    #form-wrap { max-width:600px; margin:0 auto; background:white; padding:20px; border-radius:12px; box-shadow:0 2px 10px rgba(0,0,0,.08);}
+    .items label { display:block; margin-bottom:6px;}
+  </style>
 </head>
-<body></body>
+<body>
+  <h1>부족 물품 현황</h1>
+
+  <div class="board" id="request-list">
+    로딩 중...
+  </div>
+
+  <div id="form-wrap">
+    <h2>발주 요청 등록</h2>
+    <form id="request-form">
+      <label>카페 선택</label>
+      <select id="cafe" required>
+        <option value="">--선택--</option>
+        <option value="1호점">1호점</option>
+        <option value="2호점">2호점</option>
+        <option value="3호점">3호점</option>
+        <option value="4호점">4호점</option>
+        <option value="5호점">5호점</option>
+        <option value="6호점">6호점</option>
+        <option value="7호점">7호점</option>
+      </select>
+
+      <p>필요한 물품 (복수 선택 가능)</p>
+      <div class="items" id="items">
+        <!-- 자바스크립트에서 생성 -->
+      </div>
+
+      <label>추가 메모 (선택)</label>
+      <textarea id="note" rows="2" placeholder="예: 시럽은 다 떨어졌어요"></textarea>
+
+      <button type="submit">등록</button>
+    </form>
+  </div>
+
+  <script>
+    const SUPABASE_URL = "https://YOUR_PROJECT.supabase.co"; // ⭐ 프로젝트 URL
+    const SUPABASE_KEY = "YOUR_ANON_PUBLIC_KEY"; // ⭐ anon public key
+    const supabase = supabasejs.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+    const ITEM_LIST = ["아메리카노 컵", "빨대", "시럽", "원두", "머그컵", "우유", "설탕시럽"];
+    const itemsContainer = document.getElementById("items");
+
+    ITEM_LIST.forEach(item => {
+      const label = document.createElement("label");
+      label.innerHTML = `<input type="checkbox" value="${item}" /> ${item}`;
+      itemsContainer.appendChild(label);
+    });
+
+    async function loadRequests() {
+      const list = document.getElementById("request-list");
+      list.innerHTML = "로딩 중...";
+      const { data, error } = await supabase
+        .from("requests")
+        .select("*")
+        .order("inserted_at", { ascending: false });
+
+      if (error) {
+        list.innerHTML = "데이터를 불러오지 못했습니다.";
+        console.error(error);
+        return;
+      }
+
+      if (data.length === 0) {
+        list.innerHTML = "현재 부족한 물품이 없습니다.";
+        return;
+      }
+
+      list.innerHTML = "";
+      data.forEach(row => {
+        const div = document.createElement("div");
+        div.className = "request";
+        div.innerHTML = `
+          <div>
+            <strong>${row.cafe}</strong> - ${row.item}
+            <br/><small>${new Date(row.inserted_at).toLocaleString()} ${row.note ? " / " + row.note : ""}</small>
+          </div>
+          <button data-id="${row.id}">삭제</button>
+        `;
+        div.querySelector("button").addEventListener("click", () => deleteRequest(row.id));
+        list.appendChild(div);
+      });
+    }
+
+    async function deleteRequest(id) {
+      const { error } = await supabase.from("requests").delete().eq("id", id);
+      if (error) {
+        alert("삭제 실패");
+        console.error(error);
+        return;
+      }
+      loadRequests();
+    }
+
+    document.getElementById("request-form").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const cafe = document.getElementById("cafe").value;
+      const note = document.getElementById("note").value.trim();
+      const selectedItems = [...itemsContainer.querySelectorAll("input:checked")].map(i => i.value);
+
+      if (!cafe || selectedItems.length === 0) {
+        alert("카페와 물품을 선택해주세요!");
+        return;
+      }
+
+      // 선택된 물품마다 각각 insert
+      for (const item of selectedItems) {
+        const { error } = await supabase.from("requests").insert({
+          cafe,
+          item,
+          note: note || null,
+        });
+        if (error) {
+          alert("등록 중 오류");
+          console.error(error);
+          return;
+        }
+      }
+
+      // 폼 초기화
+      e.target.reset();
+      itemsContainer.querySelectorAll("input:checked").forEach(i => i.checked = false);
+      loadRequests();
+    });
+
+    loadRequests();
+  </script>
+</body>
 </html>
