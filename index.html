@@ -36,9 +36,7 @@
       font-size: 2rem;
     }
 
-    #list {
-      margin-bottom: 30px;
-    }
+    #list { margin-bottom: 30px; }
 
     .card {
       background: var(--card-bg);
@@ -77,9 +75,7 @@
       padding-bottom: 0;
     }
 
-    .item-info {
-      flex: 1;
-    }
+    .item-info { flex: 1; }
 
     .item-name {
       font-weight: 600;
@@ -103,10 +99,7 @@
       cursor: pointer;
       white-space: nowrap;
     }
-
-    .delete-btn:hover {
-      background: var(--accent-dark);
-    }
+    .delete-btn:hover { background: var(--accent-dark); }
 
     #openModal {
       display: block;
@@ -120,10 +113,7 @@
       cursor: pointer;
       box-shadow: 0 6px 18px rgba(255,112,67,0.35);
     }
-
-    #openModal:hover {
-      background: #ff5722;
-    }
+    #openModal:hover { background: #ff5722; }
 
     #modal {
       position: fixed;
@@ -181,10 +171,7 @@
       background: var(--accent);
       color: #fff;
     }
-
-    #submitBtn:hover {
-      background: var(--accent-dark);
-    }
+    #submitBtn:hover { background: var(--accent-dark); }
 
     #closeModal {
       background: #eceff1;
@@ -220,9 +207,30 @@
     }
 
     #confirmMessage {
-      margin: 0 0 20px;
+      margin: 0 0 16px;
       line-height: 1.6;
       color: #5d4037;
+    }
+
+    #confirmPasswordWrapper {
+      display: none;
+      margin-bottom: 16px;
+      text-align: left;
+    }
+
+    #confirmPasswordWrapper label {
+      font-size: 0.95rem;
+      color: #5d4037;
+    }
+
+    #confirmPassword {
+      width: 100%;
+      padding: 10px;
+      margin-top: 6px;
+      border-radius: 10px;
+      border: 1px solid var(--accent-light);
+      background: #fffaf2;
+      font-size: 1rem;
     }
 
     #confirmButtons {
@@ -243,10 +251,7 @@
       background: var(--accent);
       color: #fff;
     }
-
-    #confirmYes:hover {
-      background: var(--accent-dark);
-    }
+    #confirmYes:hover { background: var(--accent-dark); }
 
     #confirmNo {
       background: #eceff1;
@@ -254,13 +259,8 @@
     }
 
     @media (max-width: 520px) {
-      li {
-        flex-direction: column;
-        align-items: flex-start;
-      }
-      .delete-btn {
-        align-self: flex-end;
-      }
+      li { flex-direction: column; align-items: flex-start; }
+      .delete-btn { align-self: flex-end; }
     }
   </style>
 </head>
@@ -305,6 +305,13 @@
     <div id="confirmContent">
       <h3 id="confirmTitle">확인</h3>
       <p id="confirmMessage"></p>
+
+      <div id="confirmPasswordWrapper">
+        <label>비밀번호를 입력해주세요.
+          <input type="password" id="confirmPassword" placeholder="****" maxlength="10" />
+        </label>
+      </div>
+
       <div id="confirmButtons">
         <button id="confirmNo">취소</button>
         <button id="confirmYes">확인</button>
@@ -331,7 +338,10 @@
     const confirmMessage = document.getElementById('confirmMessage');
     const confirmYes = document.getElementById('confirmYes');
     const confirmNo = document.getElementById('confirmNo');
+    const confirmPasswordWrapper = document.getElementById('confirmPasswordWrapper');
+    const confirmPasswordInput = document.getElementById('confirmPassword');
     let confirmCallback = null;
+    let confirmRequiresPassword = false;
 
     const weekdays = ['일', '월', '화', '수', '목', '금', '토'];
 
@@ -361,28 +371,41 @@
       return `${year}/${month}/${day}(${weekday}) ${hour}:${minute} (${relative})`;
     }
 
-    function openConfirm({ title, message, onConfirm }) {
+    function openConfirm({ title, message, onConfirm, requirePassword = false }) {
       confirmTitle.textContent = title;
       confirmMessage.innerHTML = message;
       confirmModal.style.display = 'flex';
       confirmCallback = onConfirm;
+      confirmRequiresPassword = requirePassword;
+      confirmPasswordInput.value = '';
+      confirmPasswordWrapper.style.display = requirePassword ? 'block' : 'none';
     }
 
     confirmYes.addEventListener('click', async () => {
+      if (confirmRequiresPassword) {
+        const password = confirmPasswordInput.value.trim();
+        if (password !== '7988') {
+          alert('비밀번호가 틀렸습니다.');
+          return;
+        }
+      }
       if (confirmCallback) await confirmCallback();
       confirmModal.style.display = 'none';
       confirmCallback = null;
+      confirmRequiresPassword = false;
     });
 
     confirmNo.addEventListener('click', () => {
       confirmModal.style.display = 'none';
       confirmCallback = null;
+      confirmRequiresPassword = false;
     });
 
     confirmModal.addEventListener('click', (e) => {
       if (e.target === confirmModal) {
         confirmModal.style.display = 'none';
         confirmCallback = null;
+        confirmRequiresPassword = false;
       }
     });
 
@@ -402,9 +425,7 @@
 
       const cafeEntries = Object.entries(grouped)
         .map(([cafe, items]) => {
-          items.sort(
-            (a, b) => new Date(a.created_at) - new Date(b.created_at)
-          );
+          items.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
           const oldest = items[0]?.created_at || null;
           return { cafe, items, oldest };
         })
@@ -421,9 +442,7 @@
           li.innerHTML = `
             <div class="item-info">
               <span class="item-name">${item.item}</span>
-              <span class="item-time">${formatKSTWithRelative(
-                item.created_at
-              )}</span>
+              <span class="item-time">${formatKSTWithRelative(item.created_at)}</span>
             </div>
             <button class="delete-btn">삭제</button>
           `;
@@ -431,17 +450,15 @@
             openConfirm({
               title: '삭제 확인',
               message: `<strong>${item.item}</strong>을(를) 삭제하시겠습니까?`,
+              requirePassword: true,
               onConfirm: async () => {
-                const { error } = await supa
-                  .from('shortages')
-                  .delete()
-                  .eq('id', item.id);
+                const { error } = await supa.from('shortages').delete().eq('id', item.id);
                 if (error) {
                   alert('삭제 중 오류 발생: ' + error.message);
                 } else {
                   loadData();
                 }
-              },
+              }
             });
           });
           ul.appendChild(li);
@@ -486,7 +503,7 @@
           form.reset();
           modal.style.display = 'none';
           loadData();
-        },
+        }
       });
     });
 
