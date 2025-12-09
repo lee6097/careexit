@@ -167,6 +167,68 @@
       color: #5d4037;
     }
 
+    /* 확인 모달 */
+    #confirmModal {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.45);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      z-index: 1000;
+    }
+
+    #confirmContent {
+      background: #fff;
+      width: 90%;
+      max-width: 400px;
+      border-radius: 18px;
+      padding: 28px 26px;
+      box-shadow: 0 12px 30px rgba(0,0,0,0.2);
+      text-align: center;
+    }
+
+    #confirmContent h3 {
+      margin: 0 0 10px;
+      font-size: 1.4rem;
+      color: #d84315;
+    }
+
+    #confirmMessage {
+      margin: 0 0 20px;
+      line-height: 1.6;
+      color: #5d4037;
+    }
+
+    #confirmButtons {
+      display: flex;
+      gap: 12px;
+    }
+
+    #confirmButtons button {
+      flex: 1;
+      padding: 12px 0;
+      font-size: 1rem;
+      border-radius: 12px;
+      border: none;
+      cursor: pointer;
+    }
+
+    #confirmYes {
+      background: var(--accent);
+      color: #fff;
+    }
+
+    #confirmYes:hover {
+      background: var(--accent-dark);
+    }
+
+    #confirmNo {
+      background: #eceff1;
+      color: #5d4037;
+    }
+
     @media (max-width: 520px) {
       li {
         flex-direction: column;
@@ -182,13 +244,11 @@
 <body>
   <h1>의왕시니어클럽 카페 물품 현황판</h1>
 
-  <div id="list">
-    <!-- 데이터가 여기 렌더링됩니다 -->
-  </div>
+  <div id="list"></div>
 
   <button id="openModal">발주하기</button>
 
-  <!-- 모달 -->
+  <!-- 입력 모달 -->
   <div id="modal">
     <div id="modalContent">
       <h2>부족 물품 입력</h2>
@@ -216,6 +276,18 @@
     </div>
   </div>
 
+  <!-- 확인 모달 -->
+  <div id="confirmModal">
+    <div id="confirmContent">
+      <h3 id="confirmTitle">확인</h3>
+      <p id="confirmMessage"></p>
+      <div id="confirmButtons">
+        <button id="confirmNo">취소</button>
+        <button id="confirmYes">확인</button>
+      </div>
+    </div>
+  </div>
+
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script>
     const SUPABASE_URL = 'https://kguyjpeliqwxvaovznvz.supabase.co';
@@ -228,6 +300,38 @@
     const form = document.getElementById('shortageForm');
     const openModalBtn = document.getElementById('openModal');
     const closeModalBtn = document.getElementById('closeModal');
+
+    const confirmModal = document.getElementById('confirmModal');
+    const confirmTitle = document.getElementById('confirmTitle');
+    const confirmMessage = document.getElementById('confirmMessage');
+    const confirmYes = document.getElementById('confirmYes');
+    const confirmNo = document.getElementById('confirmNo');
+    let confirmCallback = null;
+
+    function openConfirm({ title, message, onConfirm }) {
+      confirmTitle.textContent = title;
+      confirmMessage.innerHTML = message;
+      confirmModal.style.display = 'flex';
+      confirmCallback = onConfirm;
+    }
+
+    confirmYes.addEventListener('click', async () => {
+      if (confirmCallback) await confirmCallback();
+      confirmModal.style.display = 'none';
+      confirmCallback = null;
+    });
+
+    confirmNo.addEventListener('click', () => {
+      confirmModal.style.display = 'none';
+      confirmCallback = null;
+    });
+
+    confirmModal.addEventListener('click', (e) => {
+      if (e.target === confirmModal) {
+        confirmModal.style.display = 'none';
+        confirmCallback = null;
+      }
+    });
 
     function renderShortages(data) {
       listDiv.innerHTML = '';
@@ -254,14 +358,19 @@
             <span>${item.item}</span>
             <button class="delete-btn" data-id="${item.id}">삭제</button>
           `;
-          li.querySelector('button').addEventListener('click', async () => {
-            if (!confirm('정말 삭제하시겠습니까?')) return;
-            const { error } = await supa.from('shortages').delete().eq('id', item.id);
-            if (error) {
-              alert('삭제 중 오류 발생: ' + error.message);
-            } else {
-              loadData();
-            }
+          li.querySelector('button').addEventListener('click', () => {
+            openConfirm({
+              title: '삭제 확인',
+              message: `<strong>${item.item}</strong>을(를) 삭제하시겠습니까?`,
+              onConfirm: async () => {
+                const { error } = await supa.from('shortages').delete().eq('id', item.id);
+                if (error) {
+                  alert('삭제 중 오류 발생: ' + error.message);
+                } else {
+                  loadData();
+                }
+              }
+            });
           });
           ul.appendChild(li);
         });
@@ -285,26 +394,27 @@
       renderShortages(data);
     }
 
-    form.addEventListener('submit', async (e) => {
+    form.addEventListener('submit', (e) => {
       e.preventDefault();
       const cafe = document.getElementById('cafeSelect').value;
       const item = document.getElementById('itemInput').value.trim();
       if (!cafe || !item) return;
 
-      const confirmMsg = `전송하시겠습니까?\n카페: ${cafe}\n물품: ${item}`;
-      if (!confirm(confirmMsg)) {
-        return; // 취소하면 전송 안 함
-      }
-      
-      const { error } = await supa.from('shortages').insert({ cafe, item });
-      if (error) {
-        console.error('입력 오류:', error);
-        alert('저장 중 오류가 발생했습니다: ' + error.message);
-        return;
-      }
-      form.reset();
-      modal.style.display = 'none';
-      loadData();
+      openConfirm({
+        title: '발주 전송',
+        message: `다음 내용으로 전송할까요?<br><strong>카페:</strong> ${cafe}<br><strong>물품:</strong> ${item}`,
+        onConfirm: async () => {
+          const { error } = await supa.from('shortages').insert({ cafe, item });
+          if (error) {
+            console.error('입력 오류:', error);
+            alert('저장 중 오류가 발생했습니다: ' + error.message);
+            return;
+          }
+          form.reset();
+          modal.style.display = 'none';
+          loadData();
+        }
+      });
     });
 
     openModalBtn.addEventListener('click', () => {
@@ -325,4 +435,3 @@
   </script>
 </body>
 </html>
-
