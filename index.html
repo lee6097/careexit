@@ -27,6 +27,7 @@
       margin: auto;
       background: var(--bg);
       color: var(--text);
+      position: relative;
     }
 
     h1 {
@@ -34,6 +35,24 @@
       color: #d84315;
       margin-bottom: 28px;
       font-size: 2rem;
+    }
+
+    #refreshBtn {
+      position: absolute;
+      top: 24px;
+      right: 24px;
+      background: var(--accent-light);
+      color: #6d4c41;
+      border: none;
+      border-radius: 10px;
+      padding: 6px 12px;
+      font-size: 0.85rem;
+      cursor: pointer;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.12);
+    }
+    #refreshBtn:hover {
+      background: var(--accent);
+      color: #fff;
     }
 
     #list { margin-bottom: 30px; }
@@ -266,6 +285,7 @@
 </head>
 
 <body>
+  <button id="refreshBtn">새로고침</button>
   <h1>의왕시니어클럽 카페 물품 현황판</h1>
 
   <div id="list"></div>
@@ -280,13 +300,13 @@
         <label>어느 카페입니까?
           <select id="cafeSelect" required>
             <option value="">선택하세요</option>
-            <option>카페1</option>
-            <option>카페2</option>
-            <option>카페3</option>
-            <option>카페4</option>
-            <option>카페5</option>
-            <option>카페6</option>
-            <option>카페7</option>
+            <option>[실버카페] 다향</option>
+            <option>[실버카페] 꿈볶는카페</option>
+            <option>[디저트카페] 마루</option>
+            <option>[더플러스카페] 부곡</option>
+            <option>[더플러스카페] 포일어울림</option>
+            <option>[더플러스카페] 평생학습관</option>
+            <option>[더플러스카페] 도서관</option>
           </select>
         </label>
 
@@ -332,6 +352,7 @@
     const form = document.getElementById('shortageForm');
     const openModalBtn = document.getElementById('openModal');
     const closeModalBtn = document.getElementById('closeModal');
+    const refreshBtn = document.getElementById('refreshBtn');
 
     const confirmModal = document.getElementById('confirmModal');
     const confirmTitle = document.getElementById('confirmTitle');
@@ -449,7 +470,7 @@
           li.querySelector('button').addEventListener('click', () => {
             openConfirm({
               title: '삭제 확인',
-              message: `<strong>${item.item}</strong>을(를) 삭제하시겠습니까?`,
+              message: `<strong>${item.item}</strong>을(를) 삭제하시겠습니까?<br>※ 비밀번호가 필요합니다.`,
               requirePassword: true,
               onConfirm: async () => {
                 const { error } = await supa.from('shortages').delete().eq('id', item.id);
@@ -519,6 +540,10 @@
       if (e.target === modal) {
         modal.style.display = 'none';
       }
+    });
+
+    refreshBtn.addEventListener('click', () => {
+      loadData();
     });
 
     loadData();
