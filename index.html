@@ -2,145 +2,104 @@
 <html lang="ko">
 <head>
   <meta charset="UTF-8" />
-  <title>카페 물품 현황판</title>
-  <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+  <title>카페 물품 현황</title>
   <style>
-    body { font-family: sans-serif; margin: 20px; background:#f6f6f6;}
-    h1 { text-align:center; }
-    .board { max-width: 600px; margin:0 auto 40px; background:white; padding:20px; border-radius:12px; box-shadow:0 2px 10px rgba(0,0,0,.08);}
-    .request { display:flex; justify-content:space-between; padding:10px 0; border-bottom:1px solid #eee;}
-    .request:last-child { border-bottom:none; }
-    button { cursor:pointer; }
-    #form-wrap { max-width:600px; margin:0 auto; background:white; padding:20px; border-radius:12px; box-shadow:0 2px 10px rgba(0,0,0,.08);}
-    .items label { display:block; margin-bottom:6px;}
+    body { font-family: sans-serif; padding: 20px; max-width: 600px; margin: auto; }
+    .card { border: 1px solid #ccc; padding: 12px; margin-bottom: 10px; border-radius: 8px; }
+    .card h3 { margin-top: 0; }
+    button { padding: 8px 12px; margin-top: 5px; }
+    #modal { position: fixed; inset: 0; background: rgba(0,0,0,0.3); display: none; align-items: center; justify-content: center; }
+    #modalContent { background: #fff; padding: 20px; width: 90%; max-width: 400px; border-radius: 10px; }
+    label { display: block; margin-top: 10px; }
   </style>
 </head>
 <body>
-  <h1>부족 물품 현황</h1>
+  <h1>카페 물품 현황</h1>
+  <div id="list"></div>
+  <button id="openModal">발주하기</button>
 
-  <div class="board" id="request-list">
-    로딩 중...
+  <div id="modal">
+    <div id="modalContent">
+      <h2>부족 물품 입력</h2>
+      <form id="shortageForm">
+        <label>어느 카페입니까?
+          <select id="cafeSelect" required>
+            <option value="">선택하세요</option>
+            <option>카페1</option>
+            <option>카페2</option>
+            <option>카페3</option>
+            <option>카페4</option>
+            <option>카페5</option>
+            <option>카페6</option>
+            <option>카페7</option>
+          </select>
+        </label>
+        <label>무슨 물품이 필요합니까?
+          <input type="text" id="itemInput" placeholder="예: 우유 3팩" required />
+        </label>
+        <button type="submit">전송하기</button>
+        <button type="button" id="closeModal">닫기</button>
+      </form>
+    </div>
   </div>
 
-  <div id="form-wrap">
-    <h2>발주 요청 등록</h2>
-    <form id="request-form">
-      <label>카페 선택</label>
-      <select id="cafe" required>
-        <option value="">--선택--</option>
-        <option value="1호점">1호점</option>
-        <option value="2호점">2호점</option>
-        <option value="3호점">3호점</option>
-        <option value="4호점">4호점</option>
-        <option value="5호점">5호점</option>
-        <option value="6호점">6호점</option>
-        <option value="7호점">7호점</option>
-      </select>
-
-      <p>필요한 물품 (복수 선택 가능)</p>
-      <div class="items" id="items">
-        <!-- 자바스크립트에서 생성 -->
-      </div>
-
-      <label>추가 메모 (선택)</label>
-      <textarea id="note" rows="2" placeholder="예: 시럽은 다 떨어졌어요"></textarea>
-
-      <button type="submit">등록</button>
-    </form>
-  </div>
-
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script>
-    const SUPABASE_URL = "https://kguyjpeliqwxvaovznvz.supabase.co"; // ⭐ 프로젝트 URL
-    const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtndXlqcGVsaXF3eHZhb3Z6bnZ6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjUyMzk4NzcsImV4cCI6MjA4MDgxNTg3N30.zOvqAJhudpXSVLRGUiGcfjqiLGBVSBBh7GqwHUZvMck"; // ⭐ anon public key
-    const supabase = supabasejs.createClient(SUPABASE_URL, SUPABASE_KEY);
+    const SUPABASE_URL = 'https://YOUR_PROJECT.supabase.co';
+    const SUPABASE_ANON_KEY = 'YOUR_ANON_KEY';
+    const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-    const ITEM_LIST = ["아메리카노 컵", "빨대", "시럽", "원두", "머그컵", "우유", "설탕시럽"];
-    const itemsContainer = document.getElementById("items");
+    const listDiv = document.getElementById('list');
+    const modal = document.getElementById('modal');
+    const form = document.getElementById('shortageForm');
+    const openModalBtn = document.getElementById('openModal');
+    const closeModalBtn = document.getElementById('closeModal');
 
-    ITEM_LIST.forEach(item => {
-      const label = document.createElement("label");
-      label.innerHTML = `<input type="checkbox" value="${item}" /> ${item}`;
-      itemsContainer.appendChild(label);
-    });
-
-    async function loadRequests() {
-      const list = document.getElementById("request-list");
-      list.innerHTML = "로딩 중...";
-      const { data, error } = await supabase
-        .from("requests")
-        .select("*")
-        .order("inserted_at", { ascending: false });
-
-      if (error) {
-        list.innerHTML = "데이터를 불러오지 못했습니다.";
-        console.error(error);
-        return;
-      }
-
+    function renderShortages(data) {
+      listDiv.innerHTML = '';
       if (data.length === 0) {
-        list.innerHTML = "현재 부족한 물품이 없습니다.";
+        listDiv.innerHTML = '<p>현재 모든 물품이 충분합니다!</p>';
         return;
       }
-
-      list.innerHTML = "";
       data.forEach(row => {
-        const div = document.createElement("div");
-        div.className = "request";
-        div.innerHTML = `
-          <div>
-            <strong>${row.cafe}</strong> - ${row.item}
-            <br/><small>${new Date(row.inserted_at).toLocaleString()} ${row.note ? " / " + row.note : ""}</small>
-          </div>
+        const card = document.createElement('div');
+        card.className = 'card';
+        card.innerHTML = `
+          <h3>${row.cafe}</h3>
+          <p>${row.item}</p>
           <button data-id="${row.id}">삭제</button>
         `;
-        div.querySelector("button").addEventListener("click", () => deleteRequest(row.id));
-        list.appendChild(div);
+        card.querySelector('button').addEventListener('click', async (e) => {
+          await supabase.from('shortages').delete().eq('id', row.id);
+          loadData();
+        });
+        listDiv.appendChild(card);
       });
     }
 
-    async function deleteRequest(id) {
-      const { error } = await supabase.from("requests").delete().eq("id", id);
-      if (error) {
-        alert("삭제 실패");
-        console.error(error);
-        return;
-      }
-      loadRequests();
+    async function loadData() {
+      const { data, error } = await supabase
+        .from('shortages')
+        .select('*')
+        .order('created_at', { ascending: false });
+      if (!error) renderShortages(data);
     }
 
-    document.getElementById("request-form").addEventListener("submit", async (e) => {
+    form.addEventListener('submit', async (e) => {
       e.preventDefault();
-      const cafe = document.getElementById("cafe").value;
-      const note = document.getElementById("note").value.trim();
-      const selectedItems = [...itemsContainer.querySelectorAll("input:checked")].map(i => i.value);
-
-      if (!cafe || selectedItems.length === 0) {
-        alert("카페와 물품을 선택해주세요!");
-        return;
-      }
-
-      // 선택된 물품마다 각각 insert
-      for (const item of selectedItems) {
-        const { error } = await supabase.from("requests").insert({
-          cafe,
-          item,
-          note: note || null,
-        });
-        if (error) {
-          alert("등록 중 오류");
-          console.error(error);
-          return;
-        }
-      }
-
-      // 폼 초기화
-      e.target.reset();
-      itemsContainer.querySelectorAll("input:checked").forEach(i => i.checked = false);
-      loadRequests();
+      const cafe = document.getElementById('cafeSelect').value;
+      const item = document.getElementById('itemInput').value.trim();
+      if (!cafe || !item) return;
+      await supabase.from('shortages').insert({ cafe, item });
+      form.reset();
+      modal.style.display = 'none';
+      loadData();
     });
 
-    loadRequests();
+    openModalBtn.addEventListener('click', () => { modal.style.display = 'flex'; });
+    closeModalBtn.addEventListener('click', () => { modal.style.display = 'none'; });
+
+    loadData();
   </script>
 </body>
 </html>
-
