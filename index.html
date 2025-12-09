@@ -56,9 +56,9 @@
     }
 
     ul {
-      list-style: disc;
+      list-style: none;
       margin: 0;
-      padding-left: 18px;
+      padding-left: 0;
     }
 
     li {
@@ -66,8 +66,31 @@
       justify-content: space-between;
       align-items: center;
       gap: 12px;
-      margin: 8px 0;
+      margin: 10px 0;
       font-size: 1rem;
+      padding-bottom: 8px;
+      border-bottom: 1px solid rgba(255,255,255,0.4);
+    }
+
+    li:last-child {
+      border-bottom: none;
+      padding-bottom: 0;
+    }
+
+    .item-info {
+      flex: 1;
+    }
+
+    .item-name {
+      font-weight: 600;
+      display: block;
+      margin-bottom: 2px;
+    }
+
+    .item-time {
+      display: block;
+      color: #8d6e63;
+      font-size: 0.85rem;
     }
 
     .delete-btn {
@@ -78,6 +101,7 @@
       border: none;
       border-radius: 8px;
       cursor: pointer;
+      white-space: nowrap;
     }
 
     .delete-btn:hover {
@@ -291,7 +315,8 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script>
     const SUPABASE_URL = 'https://kguyjpeliqwxvaovznvz.supabase.co';
-    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtndXlqcGVsaXF3eHZhb3Z6bnZ6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjUyMzk4NzcsImV4cCI6MjA4MDgxNTg3N30.zOvqAJhudpXSVLRGUiGcfjqiLGBVSBBh7GqwHUZvMck';
+    const SUPABASE_ANON_KEY =
+      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtndXlqcGVsaXF3eHZhb3Z6bnZ6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjUyMzk4NzcsImV4cCI6MjA4MDgxNTg3N30.zOvqAJhudpXSVLRGUiGcfjqiLGBVSBBh7GqwHUZvMck';
 
     const supa = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
@@ -307,6 +332,34 @@
     const confirmYes = document.getElementById('confirmYes');
     const confirmNo = document.getElementById('confirmNo');
     let confirmCallback = null;
+
+    const weekdays = ['일', '월', '화', '수', '목', '금', '토'];
+
+    function toKST(date) {
+      return new Date(date.toLocaleString('en-US', { timeZone: 'Asia/Seoul' }));
+    }
+
+    function formatKSTWithRelative(timestamp) {
+      const targetUTC = new Date(timestamp);
+      const target = toKST(targetUTC);
+      const now = toKST(new Date());
+
+      const year = target.getFullYear();
+      const month = String(target.getMonth() + 1).padStart(2, '0');
+      const day = String(target.getDate()).padStart(2, '0');
+      const hour = String(target.getHours()).padStart(2, '0');
+      const minute = String(target.getMinutes()).padStart(2, '0');
+      const weekday = weekdays[target.getDay()];
+
+      const diffMs = now - target;
+      const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+      let relative;
+      if (diffDays === 0) relative = '오늘';
+      else if (diffDays === 1) relative = '어제';
+      else relative = `${diffDays}일 전`;
+
+      return `${year}/${month}/${day}(${weekday}) ${hour}:${minute} (${relative})`;
+    }
 
     function openConfirm({ title, message, onConfirm }) {
       confirmTitle.textContent = title;
@@ -336,7 +389,8 @@
     function renderShortages(data) {
       listDiv.innerHTML = '';
       if (!data || data.length === 0) {
-        listDiv.innerHTML = '<p style="text-align:center; color:#8d6e63;">현재 모든 물품이 충분합니다!</p>';
+        listDiv.innerHTML =
+          '<p style="text-align:center; color:#8d6e63;">현재 모든 물품이 충분합니다!</p>';
         return;
       }
 
@@ -346,30 +400,48 @@
         return acc;
       }, {});
 
-      Object.entries(grouped).forEach(([cafe, items]) => {
+      const cafeEntries = Object.entries(grouped)
+        .map(([cafe, items]) => {
+          items.sort(
+            (a, b) => new Date(a.created_at) - new Date(b.created_at)
+          );
+          const oldest = items[0]?.created_at || null;
+          return { cafe, items, oldest };
+        })
+        .sort((a, b) => new Date(a.oldest) - new Date(b.oldest));
+
+      cafeEntries.forEach(({ cafe, items }) => {
         const card = document.createElement('div');
         card.className = 'card';
         card.innerHTML = `<h3>${cafe}</h3>`;
         const ul = document.createElement('ul');
 
-        items.forEach(item => {
+        items.forEach((item) => {
           const li = document.createElement('li');
           li.innerHTML = `
-            <span>${item.item}</span>
-            <button class="delete-btn" data-id="${item.id}">삭제</button>
+            <div class="item-info">
+              <span class="item-name">${item.item}</span>
+              <span class="item-time">${formatKSTWithRelative(
+                item.created_at
+              )}</span>
+            </div>
+            <button class="delete-btn">삭제</button>
           `;
           li.querySelector('button').addEventListener('click', () => {
             openConfirm({
               title: '삭제 확인',
               message: `<strong>${item.item}</strong>을(를) 삭제하시겠습니까?`,
               onConfirm: async () => {
-                const { error } = await supa.from('shortages').delete().eq('id', item.id);
+                const { error } = await supa
+                  .from('shortages')
+                  .delete()
+                  .eq('id', item.id);
                 if (error) {
                   alert('삭제 중 오류 발생: ' + error.message);
                 } else {
                   loadData();
                 }
-              }
+              },
             });
           });
           ul.appendChild(li);
@@ -384,11 +456,12 @@
       const { data, error } = await supa
         .from('shortages')
         .select('*')
-        .order('created_at', { ascending: false });
+        .order('created_at', { ascending: true });
 
       if (error) {
         console.error('데이터 조회 오류:', error);
-        listDiv.innerHTML = '<p style="text-align:center;color:#e53935;">데이터를 불러오지 못했어요.</p>';
+        listDiv.innerHTML =
+          '<p style="text-align:center;color:#e53935;">데이터를 불러오지 못했어요.</p>';
         return;
       }
       renderShortages(data);
@@ -413,7 +486,7 @@
           form.reset();
           modal.style.display = 'none';
           loadData();
-        }
+        },
       });
     });
 
